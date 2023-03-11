@@ -63,12 +63,14 @@ public class TriggerCallbackThread {
                 // normal callback
                 while(!toStop){
                     try {
+                        //队列take方法，如果没有数据，会阻塞，直到有数据了；不用空转
                         HandleCallbackParam callback = getInstance().callBackQueue.take();
                         if (callback != null) {
 
-                            // callback list param
+                            //这里需要一个list去CallBack，目前list数量不可控，drainTo方法是将队列中的所有元素都放进callbackParamList中；
+                            // 可以使用poll和take结合，批量callBack，比如callbackParamList够100条之后再进行callBack
                             List<HandleCallbackParam> callbackParamList = new ArrayList<HandleCallbackParam>();
-                            int drainToNum = getInstance().callBackQueue.drainTo(callbackParamList);
+                            getInstance().callBackQueue.drainTo(callbackParamList);
                             callbackParamList.add(callback);
 
                             // callback, will retry if error
@@ -83,10 +85,12 @@ public class TriggerCallbackThread {
                     }
                 }
 
+                //toStop 变为true，不进入上面的循环，走这里
                 // last callback
                 try {
                     List<HandleCallbackParam> callbackParamList = new ArrayList<HandleCallbackParam>();
-                    int drainToNum = getInstance().callBackQueue.drainTo(callbackParamList);
+                    //drainTo 将队列中的元素全部转移到callbackParamList中
+                    getInstance().callBackQueue.drainTo(callbackParamList);
                     if (callbackParamList!=null && callbackParamList.size()>0) {
                         doCallback(callbackParamList);
                     }
@@ -99,6 +103,7 @@ public class TriggerCallbackThread {
 
             }
         });
+        //设置为守护线程；该属性需要在线程启动前设置
         triggerCallbackThread.setDaemon(true);
         triggerCallbackThread.setName("xxl-job, executor TriggerCallbackThread");
         triggerCallbackThread.start();
@@ -132,12 +137,18 @@ public class TriggerCallbackThread {
         triggerRetryCallbackThread.start();
 
     }
+
+    /**
+     * destory方法会调用该方法，
+     */
     public void toStop(){
         toStop = true;
         // stop callback, interrupt and wait
         if (triggerCallbackThread != null) {    // support empty admin address
+            //打断线程,interrupt只是会标记线程的打断标记true,并不是调用该方法后线程就立马停止工作
             triggerCallbackThread.interrupt();
             try {
+                //join方法让该线程插队，必须等该线程的任务执行完之后才会往下执行
                 triggerCallbackThread.join();
             } catch (InterruptedException e) {
                 logger.error(e.getMessage(), e);
@@ -183,7 +194,7 @@ public class TriggerCallbackThread {
     }
 
     /**
-     * callback log
+     * callback log 不从callback日志
      */
     private void callbackLog(List<HandleCallbackParam> callbackParamList, String logContent){
         for (HandleCallbackParam callbackParam: callbackParamList) {

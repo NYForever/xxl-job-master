@@ -65,6 +65,7 @@ public class ExecutorRegistryThread {
 
                     }
 
+                    //等待30s之后重新注册
                     try {
                         if (!toStop) {
                             TimeUnit.SECONDS.sleep(RegistryConfig.BEAT_TIMEOUT);
@@ -77,6 +78,7 @@ public class ExecutorRegistryThread {
                 }
 
                 // registry remove
+                //toStop为true，不进入上面循环，删除注册信息
                 try {
                     RegistryParam registryParam = new RegistryParam(RegistryConfig.RegistType.EXECUTOR.name(), appname, address);
                     for (AdminBiz adminBiz: XxlJobExecutor.getAdminBizList()) {

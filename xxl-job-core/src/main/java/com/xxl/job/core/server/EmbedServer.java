@@ -77,11 +77,13 @@ public class EmbedServer {
                             .childOption(ChannelOption.SO_KEEPALIVE, true);
 
                     // bind
+                    //通过netty绑定端口
                     ChannelFuture future = bootstrap.bind(port).sync();
 
                     logger.info(">>>>>>>>>>> xxl-job remoting server start success, nettype = {}, port = {}", EmbedServer.class, port);
 
                     // start registry
+                    //注册当前执行器信息，服务名 ip:端口
                     startRegistry(appname, address);
 
                     // wait util stop

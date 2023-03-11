@@ -1,3 +1,55 @@
+
+# xxljob源码分析
+
+
+## 客户端启动
+
+- 1.通过@Bean注入xxljob配置类`XxlJobSpringExecutor`
+- 2.其实现了接口`SmartInitializingSingleton`，会在所有非懒加载的单例bean初始化完成之后，执行`afterSingletonsInstantiated`方法
+    - 1.`initJobHandlerMethodRepository`注册所有标注了xxljob主机的方法
+    - 2.其是通过`applicationContext`获取到所有的BeanDefinition信息，挨个遍历获取，在项目所包含的bean很多的情况下，会显得很臃肿，**可以考虑优化**
+    - 3.将扫描到的bean+method信息，拼接为`MethodJobHandler`对象
+    - 4.最终注册在`jobHandlerRepository`中，`jobHandlerRepository`是一个`ConcurrentMap`
+- 3.调用`XxlJobExecutor`的`start`方法，开启主流程
+  - 1.初始化日志文件，如果没有文件，则创建
+  - 2.初始化admin服务端的服务器地址，放入`adminBizList`中
+  - 3.单独启动线程，定时删除过期日志
+  - 4.启动callback、retryCallback线程，用于在定时任务完成后追加回调日志
+  - 5.向admin服务端注册本机执行器信息
+    - 1.获取ip+端口，端口默认为9999
+    - 2.通过netty绑定该端口，用于和服务器端通信
+    - 3.将appName ip:port信息通过admin暴露的注册接口，注入到admin端
+    - 4.30s之后会重新进行注册
+    - 5.在本机服务关闭时`toStop`属性变为true，会调用admin的移除注册器接口，将本机信息从admin端删除
+
+tips:
+- 1.项目中多次用到了守护线程。thread.setDaemon(true);该方法需要在线程启动前设置，启动后设置无效
+- 2.多次用到了`LinkedBlockingQueue`队列
+
+## admin服务端
+
+
+### 启动
+
+### 调度
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <p align="center" >
     <img src="https://www.xuxueli.com/doc/static/xxl-job/images/xxl-logo.jpg" width="150">
     <h3 align="center">XXL-JOB</h3>
