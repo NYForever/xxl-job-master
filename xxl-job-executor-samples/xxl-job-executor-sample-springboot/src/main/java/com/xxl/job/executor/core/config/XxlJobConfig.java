@@ -41,6 +41,10 @@ public class XxlJobConfig {
     private int logRetentionDays;
 
 
+    /**
+     * 配置类入口，通过注入XxlJobSpringExecutor开启一系列流程
+     * @return
+     */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
         logger.info(">>>>>>>>>>> xxl-job config init.");

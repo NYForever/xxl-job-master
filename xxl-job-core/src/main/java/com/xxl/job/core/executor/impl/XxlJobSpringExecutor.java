@@ -27,6 +27,9 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
     private static final Logger logger = LoggerFactory.getLogger(XxlJobSpringExecutor.class);
 
 
+    /**
+     * 实现了SmartInitializingSingleton，在bean初始化之后会执行该方法
+     */
     // start
     @Override
     public void afterSingletonsInstantiated() {
@@ -35,13 +38,15 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
         /*initJobHandlerRepository(applicationContext);*/
 
         // init JobHandler Repository (for method)
+        //注册标注了xxljob注解的方法信息
         initJobHandlerMethodRepository(applicationContext);
 
-        // refresh GlueFactory
+        // refresh GlueFactory TODO 给类属性进行赋值，是给哪些类赋值了？
         GlueFactory.refreshInstance(1);
 
         // super start
         try {
+            //调用父类通用启动方法
             super.start();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -54,34 +59,12 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
         super.destroy();
     }
 
-
-    /*private void initJobHandlerRepository(ApplicationContext applicationContext) {
-        if (applicationContext == null) {
-            return;
-        }
-
-        // init job handler action
-        Map<String, Object> serviceBeanMap = applicationContext.getBeansWithAnnotation(JobHandler.class);
-
-        if (serviceBeanMap != null && serviceBeanMap.size() > 0) {
-            for (Object serviceBean : serviceBeanMap.values()) {
-                if (serviceBean instanceof IJobHandler) {
-                    String name = serviceBean.getClass().getAnnotation(JobHandler.class).value();
-                    IJobHandler handler = (IJobHandler) serviceBean;
-                    if (loadJobHandler(name) != null) {
-                        throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
-                    }
-                    registJobHandler(name, handler);
-                }
-            }
-        }
-    }*/
-
     private void initJobHandlerMethodRepository(ApplicationContext applicationContext) {
         if (applicationContext == null) {
             return;
         }
         // init job handler from method
+        //获取项目所有beanDefinition信息
         String[] beanDefinitionNames = applicationContext.getBeanNamesForType(Object.class, false, true);
         for (String beanDefinitionName : beanDefinitionNames) {
             Object bean = applicationContext.getBean(beanDefinitionName);
@@ -106,6 +89,7 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
                 Method executeMethod = methodXxlJobEntry.getKey();
                 XxlJob xxlJob = methodXxlJobEntry.getValue();
                 // regist
+                //将标注xxljob注解的方法信息注册
                 registJobHandler(xxlJob, bean, executeMethod);
             }
         }

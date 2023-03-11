@@ -68,13 +68,15 @@ public class XxlJobExecutor  {
     public void start() throws Exception {
 
         // init logpath
+        //创建日志文件路径
         XxlJobFileAppender.initLogPath(logPath);
 
         // init invoker, admin-client
+        //初始化admin服务地址列表
         initAdminBizList(adminAddresses, accessToken);
 
-
         // init JobLogFileCleanThread
+        //启动线程，定时删除过期日志
         JobLogFileCleanThread.getInstance().start(logRetentionDays);
 
         // init TriggerCallbackThread
@@ -196,18 +198,9 @@ public class XxlJobExecutor  {
             throw new RuntimeException("xxl-job method-jobhandler name invalid, for[" + clazz + "#" + methodName + "] .");
         }
         if (loadJobHandler(name) != null) {
+            //已经注册过该name的JobHandler，conflicts：冲突
             throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
         }
-
-        // execute method
-        /*if (!(method.getParameterTypes().length == 1 && method.getParameterTypes()[0].isAssignableFrom(String.class))) {
-            throw new RuntimeException("xxl-job method-jobhandler param-classtype invalid, for[" + bean.getClass() + "#" + method.getName() + "] , " +
-                    "The correct method format like \" public ReturnT<String> execute(String param) \" .");
-        }
-        if (!method.getReturnType().isAssignableFrom(ReturnT.class)) {
-            throw new RuntimeException("xxl-job method-jobhandler return-classtype invalid, for[" + bean.getClass() + "#" + method.getName() + "] , " +
-                    "The correct method format like \" public ReturnT<String> execute(String param) \" .");
-        }*/
 
         executeMethod.setAccessible(true);
 

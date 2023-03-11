@@ -19,6 +19,9 @@ public class TriggerParam implements Serializable{
     private long logDateTime;
 
     private String glueType;
+    /**
+     *
+     */
     private String glueSource;
     private long glueUpdatetime;
 
