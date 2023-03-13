@@ -84,6 +84,7 @@ public class JobTriggerPoolHelper {
         }
 
         // trigger
+        //线程池
         triggerPool_.execute(new Runnable() {
             @Override
             public void run() {
@@ -92,6 +93,7 @@ public class JobTriggerPoolHelper {
 
                 try {
                     // do trigger
+                    //执行调度
                     XxlJobTrigger.trigger(jobId, triggerType, failRetryCount, executorShardingParam, executorParam, addressList);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);

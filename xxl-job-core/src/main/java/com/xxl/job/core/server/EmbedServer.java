@@ -183,6 +183,7 @@ public class EmbedServer {
             }
 
             // services mapping
+            //客户端注册完成后，会暴露以下接口，admin服务端通过http进行调用
             try {
                 switch (uri) {
                     case "/beat":
@@ -190,6 +191,7 @@ public class EmbedServer {
                     case "/idleBeat":
                         IdleBeatParam idleBeatParam = GsonTool.fromJson(requestData, IdleBeatParam.class);
                         return executorBiz.idleBeat(idleBeatParam);
+                        //触发调度
                     case "/run":
                         TriggerParam triggerParam = GsonTool.fromJson(requestData, TriggerParam.class);
                         return executorBiz.run(triggerParam);

@@ -1168,6 +1168,12 @@ public final class CronExpression implements Serializable, Cloneable {
     //
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * 解析cron表达式，获取下次执行时间，核心方法
+     *
+     * @param afterTime
+     * @return
+     */
     public Date getTimeAfter(Date afterTime) {
 
         // Computation is based on Gregorian year only.
