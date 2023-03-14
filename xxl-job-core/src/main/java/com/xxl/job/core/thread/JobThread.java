@@ -165,6 +165,8 @@ public class JobThread extends Thread {
                             // handle result
                             XxlJobHelper.handleTimeout("job execute timeout ");
                         } finally {
+                            //interrupt方法是一个标识，表示线程挂起，并不是直接结束线程对应的任务
+                            //需要用futureThread.isInterrupted()方法来判断之后，我们自己处理
                             futureThread.interrupt();
                         }
                     } else {
@@ -190,6 +192,7 @@ public class JobThread extends Thread {
                     );
 
                 } else {
+                    //triggerParam 连续30次都是空的，并且这个任务对应的队列size为0，认为这个job有问题
                     if (idleTimes > 30) {
                         if (triggerQueue.size() == 0) {    // avoid concurrent trigger causes jobId-lost
                             XxlJobExecutor.removeJobThread(jobId, "excutor idel times over limit.");

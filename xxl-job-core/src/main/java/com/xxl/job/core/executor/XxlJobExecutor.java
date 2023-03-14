@@ -250,6 +250,7 @@ public class XxlJobExecutor {
     private static ConcurrentMap<Integer, JobThread> jobThreadRepository = new ConcurrentHashMap<Integer, JobThread>();
 
     public static JobThread registJobThread(int jobId, IJobHandler handler, String removeOldReason) {
+        //每个任务对应一个JobThread，每个任务都有一个执行队列，每个任务都有一个线程处理队列中的数据
         JobThread newJobThread = new JobThread(jobId, handler);
         newJobThread.start();
         logger.info(">>>>>>>>>>> xxl-job regist JobThread success, jobId:{}, handler:{}", new Object[]{jobId, handler});
