@@ -4,15 +4,15 @@
 ## 问题
 - 1.xxljob通过数据库获取未来5s要执行的job，怎么保证job都是在其整点执行的？
 - 2.执行器的注册逻辑为30s注册一次，数据是写入到了mysql，可以考虑换成zk等注册中心？
-- 3.`ExecutorRouter`路由策略接口类，使用了策略模式；需要一一查看对应的策略如何时间（lru、lfu、轮训、随机等策略）
+- 3.`ExecutorRouter`路由策略接口类，使用了策略模式；需要一一查看对应的策略（lru、lfu、轮训、随机等策略）
 - 4.2.2.0版本最大的变化是自己解析cron表达式，计算任务下次的执行时间 `CronExpression.getNextValidTimeAfter()`
 
 ## 客户端启动
 
 - 1.通过@Bean注入xxljob配置类`XxlJobSpringExecutor`
 - 2.其实现了接口`SmartInitializingSingleton`，会在所有非懒加载的单例bean初始化完成之后，执行`afterSingletonsInstantiated`方法
-    - 1.`initJobHandlerMethodRepository`注册所有标注了xxljob主机的方法
-    - 2.其是通过`applicationContext`获取到所有的BeanDefinition信息，挨个遍历获取，在项目所包含的bean很多的情况下，会显得很臃肿，**可以考虑优化**
+    - 1.`initJobHandlerMethodRepository`注册所有标注了xxljob注解的方法
+    - 2.其是通过`applicationContext`获取到所有的BeanDefinition信息，挨个遍历获取标注了xxljob注解的方法，在项目所包含的bean很多的情况下，会显得很臃肿，**可以考虑优化**
     - 3.将扫描到的bean+method信息，拼接为`MethodJobHandler`对象
     - 4.最终注册在`jobHandlerRepository`中，`jobHandlerRepository`是一个`ConcurrentMap`
 - 3.调用`XxlJobExecutor`的`start`方法，开启主流程
@@ -34,26 +34,17 @@ tips:
 ## admin服务端
 - 1.入口`XxlJobAdminConfig`，是spring的一个bean，其实现了`InitializingBean`接口，在初始化bean的过程中会执行`afterPropertiesSet`
 - 2.创建`XxlJobScheduler`，并执行其`init`方法，调用`JobScheduleHelper.start()`方法
-- 3.`JobScheduleHelper`使用一个线程查询出未来5s将要执行的任务，使用`JobTriggerPoolHelper.trigger()`调度任务，并计算任务的下次执行时间，写入到mysql中
-  - 1.其中`JobScheduleHelper`有两个线程池`fastTriggerPool`、`slowTriggerPool`，正常trigger使用`fastTriggerPool`，如果一个任务的调度在一分钟内超时了10次，为了不影响其他任务，使用单独的线程池调度`slowTriggerPool`
+- 3.`JobScheduleHelper`使用一个线程查询数据库，获取未来5s将要执行的任务，使用`JobTriggerPoolHelper.trigger()`调度任务，并计算任务的下次执行时间，写入到mysql中
+  - 1.其中`JobScheduleHelper`有两个线程池`fastTriggerPool`、`slowTriggerPool`，正常trigger使用`fastTriggerPool`，如果一个任务的调度在**一分钟内超时了10次**，为了不影响其他任务，使用单独的线程池调度`slowTriggerPool`
 - 4.tirgger过程中，根据任务配置的执行策略`executorRouteStrategy`，通过枚举`ExecutorRouteStrategyEnum`选择不同的策略，这里使用了**策略模式**，即`ExecutorRouter`不同的实现类，执行不同的逻辑
 - 5.`runExecutor()`方法调用clent端，具体实现为`ExecutorBizClient`，通过http接口触发client端调度
 - 6.客户端具体实现为`ExecutorBizImpl.run()`
   - 1.会根据不同的GLUE模式，创建不同的`JobThread`，其中每个`JobThread`都创建了其对应的`IJobHandler`对象；
-  - **注意：每个任务对应一个`JobThread`，每个`JobThread`都有一个执行队列，每个`JobThread`都创建了其对应的`IJobHandler`对象，每个`JobThread`都有一个线程处理队列中的数据**
+  - **注意：每个任务对应一个`JobThread`，每个`JobThread`都有一个执行队列，每个`JobThread`都创建了其对应的`IJobHandler`对象（真正执行任务代码），每个`JobThread`都有一个线程处理队列中的数据**
   - 2.最终调用`jobThread.pushTriggerQueue`，将要执行的任务放入到队列中，即每个任务都有自己的队列：`LinkedBlockingQueue<TriggerParam> triggerQueue;`
   - 3.`JobThread`类继承了`Thread`类；其run方法会从队列中poll元素
-  - 4.最终会调用`IJobHandler.execute()`方法，如果任务是Bean模式，则会反射调用任务对应的方法
-  - 5.在client端关闭时，会检查`triggerQueue`队列中还有没有任务，所有未执行的任务不再执行，而是会放入`callBackQueue`队列中，在回调日志中会说明任务被中断，未执行
-
-
-### 启动
-
-### 调度
-
-
-
-
+  - 4.最终会调用`IJobHandler.execute()`方法执行任务，如果任务是Bean模式，则会反射调用任务对应的方法（class、method是在client启动过程中注入的）
+  - 5.在client端关闭时，会检查`triggerQueue`队列中还有没有任务，所有未执行的任务**不再执行**，而是会放入`callBackQueue`队列中，在回调日志中会说明任务被中断，未执行
 
 
 
