@@ -2,10 +2,10 @@
 # xxljob源码分析
 
 ## 问题
-- 1.xxljob的配置类，为什么要手动注入属性？导致的问题是nacos的动态配置，在xxljob的配置类中并不能生效
-- 2.xxljob通过数据库获取未来5s要执行的job，怎么保证job都是在其整点执行的？
-- 3.执行器的注册逻辑为30s注册一次，数据是写入到了mysql，可以考虑换成zk等注册中心？
-- 4.`ExecutorRouter`路由策略接口类，使用了策略模式；需要一一查看对应的策略如何时间（lru、lfu、轮训、随机等策略）
+- 1.xxljob通过数据库获取未来5s要执行的job，怎么保证job都是在其整点执行的？
+- 2.执行器的注册逻辑为30s注册一次，数据是写入到了mysql，可以考虑换成zk等注册中心？
+- 3.`ExecutorRouter`路由策略接口类，使用了策略模式；需要一一查看对应的策略如何时间（lru、lfu、轮训、随机等策略）
+- 4.2.2.0版本最大的变化是自己解析cron表达式，计算任务下次的执行时间 `CronExpression.getNextValidTimeAfter()`
 
 ## 客户端启动
 
@@ -32,6 +32,19 @@ tips:
 - 2.多次用到了`LinkedBlockingQueue`队列
 
 ## admin服务端
+- 1.入口`XxlJobAdminConfig`，是spring的一个bean，其实现了`InitializingBean`接口，在初始化bean的过程中会执行`afterPropertiesSet`
+- 2.创建`XxlJobScheduler`，并执行其`init`方法，调用`JobScheduleHelper.start()`方法
+- 3.`JobScheduleHelper`使用一个线程查询出未来5s将要执行的任务，使用`JobTriggerPoolHelper.trigger()`调度任务，并计算任务的下次执行时间，写入到mysql中
+  - 1.其中`JobScheduleHelper`有两个线程池`fastTriggerPool`、`slowTriggerPool`，正常trigger使用`fastTriggerPool`，如果一个任务的调度在一分钟内超时了10次，为了不影响其他任务，使用单独的线程池调度`slowTriggerPool`
+- 4.tirgger过程中，根据任务配置的执行策略`executorRouteStrategy`，通过枚举`ExecutorRouteStrategyEnum`选择不同的策略，这里使用了**策略模式**，即`ExecutorRouter`不同的实现类，执行不同的逻辑
+- 5.`runExecutor()`方法调用clent端，具体实现为`ExecutorBizClient`，通过http接口触发client端调度
+- 6.客户端具体实现为`ExecutorBizImpl.run()`
+  - 1.会根据不同的GLUE模式，创建不同的`JobThread`，其中每个`JobThread`都创建了其对应的`IJobHandler`对象；
+  - **注意：每个任务对应一个`JobThread`，每个`JobThread`都有一个执行队列，每个`JobThread`都创建了其对应的`IJobHandler`对象，每个`JobThread`都有一个线程处理队列中的数据**
+  - 2.最终调用`jobThread.pushTriggerQueue`，将要执行的任务放入到队列中，即每个任务都有自己的队列：`LinkedBlockingQueue<TriggerParam> triggerQueue;`
+  - 3.`JobThread`类继承了`Thread`类；其run方法会从队列中poll元素
+  - 4.最终会调用`IJobHandler.execute()`方法，如果任务是Bean模式，则会反射调用任务对应的方法
+  - 5.在client端关闭时，会检查`triggerQueue`队列中还有没有任务，所有未执行的任务不再执行，而是会放入`callBackQueue`队列中，在回调日志中会说明任务被中断，未执行
 
 
 ### 启动

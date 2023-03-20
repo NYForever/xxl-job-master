@@ -41,7 +41,9 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
         //注册标注了xxljob注解的方法信息
         initJobHandlerMethodRepository(applicationContext);
 
-        // refresh GlueFactory TODO 给类属性进行赋值，是给哪些类赋值了？
+        // refresh GlueFactory
+        // GLUE(java)模式，因为是直接在xxljob admin端录入java代码，其用到的属性和注入的属性都为空，需要在这里给他设置
+        // 会注入一些属性
         GlueFactory.refreshInstance(1);
 
         // super start

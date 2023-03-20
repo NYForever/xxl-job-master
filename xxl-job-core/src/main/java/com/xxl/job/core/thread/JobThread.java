@@ -114,7 +114,7 @@ public class JobThread extends Thread {
             TriggerParam triggerParam = null;
             try {
                 // to check toStop signal, we need cycle, so wo cannot use queue.take(), instand of poll(timeout)
-                //从队列中取出任务，进行调度，超时时间为3秒
+                //从队列中取出任务，进行调度，超时时间为3秒，如果一直没有任务，会空耗cpu，可以考虑改为take方法获取队列元素
                 triggerParam = triggerQueue.poll(3L, TimeUnit.SECONDS);
                 if (triggerParam != null) {
                     running = true;
