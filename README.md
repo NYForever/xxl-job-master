@@ -15,6 +15,18 @@
     - 2.其是通过`applicationContext`获取到所有的BeanDefinition信息，挨个遍历获取标注了xxljob注解的方法，在项目所包含的bean很多的情况下，会显得很臃肿，**可以考虑优化**
     - 3.将扫描到的bean+method信息，拼接为`MethodJobHandler`对象
     - 4.最终注册在`jobHandlerRepository`中，`jobHandlerRepository`是一个`ConcurrentMap`
+> 
+> 如何优化：
+> 实现spring的后置处理器`BeanPostProcessor`，重写`postProcessAfterInitialization`方法，
+> 在每个bean加载到spring的过程中，即检查bean，将需要的信息直接注入到`jobHandlerRepository`中
+> 这样做就避免了在所有bean都创建完成的情况下，再次循环获取所有的bean进行判断，减少启动耗时
+ 
+>
+> 我们自己实现的`BeanPostProcessor`，可通过定义start的方式，在spring.factories中指定配置文件，在配置文件中注入`BeanPostProcessor`
+> 
+
+
+
 - 3.调用`XxlJobExecutor`的`start`方法，开启主流程
   - 1.初始化日志文件，如果没有文件，则创建
   - 2.初始化admin服务端的服务器地址，放入`adminBizList`中
